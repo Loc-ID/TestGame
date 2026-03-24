@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ TIMINGGAME — Vision AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06060f;
+  --surface: #0c0c1a;
+  --surface2: #111128;
+  --border: #1c1c38;
+  --accent: #FFE600;
+  --red: #FF2D55;
+  --green: #00FF8A;
+  --blue: #00BAFF;
+  --purple: #9B59FF;
+  --text: #dde0f5;
+  --muted: #44446a;
+  --sans: 'Rajdhani', sans-serif;
+  --mono: 'Share Tech Mono', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── SETUP ── */
+#setup-screen {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 50%, rgba(255,230,0,0.06) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 60% at 85% 30%, rgba(0,186,255,0.05) 0%, transparent 100%);
+}
+
+.setup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
+  padding: 2.5rem 3rem;
+  max-width: 500px;
+  width: 100%;
+}
+
+.logo { font-size: 2.8rem; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 0.2rem; }
+.logo .y { color: var(--accent); }
+.logo .r { color: var(--red); }
+
+.tagline {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  letter-spacing: 3px; text-transform: uppercase; margin-bottom: 2.5rem;
+}
+
+.field-label {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--muted);
+  letter-spacing: 3px; text-transform: uppercase; display: block; margin-bottom: 0.45rem;
+}
+.field-group { margin-bottom: 1.4rem; }
+
+input[type="text"], input[type="password"] {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 0.7rem 0.9rem; font-family: var(--mono);
+  font-size: 0.88rem; outline: none; transition: border-color 0.15s; border-radius: 0;
+}
+input:focus { border-color: var(--accent); }
+input::placeholder { color: var(--muted); }
+
+.sport-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin-bottom: 1.4rem; }
+
+.sport-btn {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  padding: 0.85rem 0.5rem; cursor: pointer; font-family: var(--sans);
+  font-size: 0.95rem; font-weight: 600; text-align: center; transition: all 0.12s;
+}
+.sport-btn:hover { border-color: rgba(255,230,0,0.4); color: var(--text); }
+.sport-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(255,230,0,0.04); }
+.sport-emoji { display: block; font-size: 1.6rem; margin-bottom: 0.2rem; }
+
+.btn-primary {
+  width: 100%; background: var(--accent); border: none; color: #000;
+  padding: 0.9rem; font-family: var(--sans); font-size: 1rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.12s;
+}
+.btn-primary:hover { background: #fff; }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; background: var(--accent); }
+
+.setup-note {
+  font-family: var(--mono); font-size: 0.65rem; color: var(--muted);
+  text-align: center; margin-top: 0.9rem; line-height: 1.6;
+}
+.setup-note a { color: var(--blue); text-decoration: none; }
+
+.error-msg {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--red);
+  margin-top: 0.5rem; padding: 0.35rem 0.5rem;
+  background: rgba(255,45,85,0.08); border-left: 2px solid var(--red);
+  display: none; word-break: break-word;
+}
+.error-msg.visible { display: block; }
+
+.vision-badge {
+  display: inline-block; background: rgba(155,89,255,0.12);
+  border: 1px solid rgba(155,89,255,0.3); color: var(--purple);
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 2px;
+  padding: 0.2rem 0.5rem; margin-bottom: 1.2rem;
+}
+
+/* ── GAME SCREEN ── */
+#game-screen { flex-direction: column; }
+
+.game-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.65rem 1.5rem; background: var(--surface);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+}
+
+.game-logo { font-size: 1.15rem; font-weight: 700; }
+.game-logo .y { color: var(--accent); }
+
+.hdr-stats { display: flex; gap: 2rem; font-family: var(--mono); }
+.stat { text-align: center; }
+.stat-label { display: block; font-size: 0.6rem; letter-spacing: 2px; color: var(--muted); margin-bottom: 0.1rem; }
+.stat-value { font-size: 1.1rem; color: var(--accent); }
+
+.sport-pill {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--blue);
+  border: 1px solid rgba(0,186,255,0.35); padding: 0.2rem 0.6rem; letter-spacing: 1px;
+}
+
+.game-body { display: grid; grid-template-columns: 1fr 360px; flex: 1; min-height: 0; }
+
+.stream-col { background: #000; display: flex; flex-direction: column; min-height: 0; }
+.stream-wrap { flex: 1; position: relative; min-height: 300px; display: flex; align-items: center; justify-content: center; background: #000; }
+
+.stream-wrap video {
+  width: 100%; height: 100%; object-fit: contain; background: #000; display: block;
+}
+
+.no-video-msg {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, #0d0d20 0%, #060609 100%);
+  color: var(--muted); gap: 0.5rem; font-family: var(--mono); font-size: 0.8rem;
+  text-align: center; padding: 2rem;
+}
+.no-video-msg .icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.no-video-msg strong { color: var(--text); font-family: var(--sans); font-size: 1rem; }
+.no-video-msg code { color: var(--accent); background: rgba(255,230,0,0.08); padding: 0.15rem 0.4rem; }
+
+.video-bar {
+  display: flex; align-items: center; background: var(--surface);
+  border-top: 1px solid var(--border); flex-shrink: 0;
+  padding: 0.4rem 1rem; gap: 0.7rem; font-family: var(--mono); font-size: 0.72rem;
+}
+.video-bar .timecode { color: var(--accent); min-width: 60px; }
+.video-bar .vid-label { color: var(--muted); font-size: 0.6rem; letter-spacing: 2px; }
+
+.ctrl-panel {
+  background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; max-height: calc(100vh - 50px);
+}
+
+.panel-sec { padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border); }
+
+.sec-label {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 3px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 0.85rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.sec-label .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.sec-label .dot.live { background: var(--red); animation: blink 1s infinite; }
+
+.status-line {
+  font-size: 0.95rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); transition: color 0.3s; font-family: var(--mono);
+}
+.status-line.waiting { color: var(--muted); }
+.status-line.hint { color: var(--accent); animation: pulse-txt 1.2s infinite; }
+.status-line.analyzing { color: var(--purple); animation: pulse-txt 1.2s infinite; }
+.status-line.event { color: var(--red); }
+.status-line.done { color: var(--green); }
+
+.event-name { font-size: 2rem; font-weight: 700; color: var(--red); min-height: 2.5rem; letter-spacing: 1px; margin-top: 0.3rem; }
+
+.btn-wrap { padding: 1.25rem 1rem; text-align: center; }
+
+#moment-btn {
+  width: 170px; height: 170px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #ff4060 0%, #b5001f 100%);
+  border: 3px solid #ff2d55; color: #fff; font-family: var(--sans);
+  font-size: 1.3rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: transform 0.08s, box-shadow 0.2s;
+  box-shadow: 0 0 28px rgba(255,45,85,0.3), 0 0 60px rgba(255,45,85,0.1), inset 0 1px 0 rgba(255,255,255,0.15);
+  outline: none; line-height: 1.3;
+}
+#moment-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 40px rgba(255,45,85,0.55), 0 0 90px rgba(255,45,85,0.2); }
+#moment-btn:active:not(:disabled) { transform: scale(0.95); }
+#moment-btn:disabled { opacity: 0.25; cursor: not-allowed; box-shadow: none; }
+#moment-btn.clicked {
+  background: radial-gradient(circle at 38% 32%, #9B59FF 0%, #6a2ebe 100%);
+  border-color: var(--purple); box-shadow: 0 0 35px rgba(155,89,255,0.45); color: #fff;
+}
+#moment-btn.ready-state {
+  background: radial-gradient(circle at 38% 32%, #00ff8a 0%, #009b52 100%);
+  border-color: var(--green); box-shadow: 0 0 28px rgba(0,255,138,0.3); color: #000; font-size: 1.1rem;
+}
+#moment-btn.success-state {
+  background: radial-gradient(circle at 38% 32%, #ffe600 0%, #b89e00 100%);
+  border-color: var(--accent); box-shadow: 0 0 35px rgba(255,230,0,0.45); color: #000;
+}
+
+.click-hint { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-top: 0.6rem; }
+
+.score-row { text-align: center; padding: 0.25rem 0 0.5rem; min-height: 5rem; }
+.score-num {
+  font-family: var(--mono); font-size: 3.2rem; font-weight: bold; color: var(--green);
+  opacity: 0; transform: translateY(8px); transition: all 0.35s cubic-bezier(.22,.68,0,1.2);
+}
+.score-num.show { opacity: 1; transform: translateY(0); }
+.score-num.miss { color: var(--red); }
+.score-num.ok { color: var(--accent); }
+
+.delta-txt { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+.ai-box {
+  background: var(--bg); border: 1px solid var(--border); padding: 0.85rem;
+  position: relative; font-size: 0.88rem; line-height: 1.55; min-height: 72px;
+}
+.ai-chip {
+  position: absolute; top: -0.55rem; left: 0.7rem; background: var(--bg);
+  padding: 0 0.4rem; font-family: var(--mono); font-size: 0.6rem;
+  color: var(--purple); letter-spacing: 2px;
+}
+
+.thinking { color: var(--muted); font-family: var(--mono); font-size: 0.72rem; }
+.thinking::after { content: '▌'; animation: blink 0.8s infinite; }
+
+.frames-preview {
+  display: flex; gap: 4px; margin-top: 0.6rem; overflow-x: auto;
+}
+.frames-preview .frame-thumb {
+  width: 56px; height: 32px; background: var(--bg); border: 1px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 0.5rem; color: var(--muted);
+}
+.frames-preview .frame-thumb.center { border-color: var(--accent); }
+
+.history-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.h-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 0.72rem; padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.h-event { color: var(--text); flex: 1; margin-right: 0.5rem; }
+.h-score { font-weight: bold; flex-shrink: 0; }
+.h-score.g { color: var(--green); }
+.h-score.o { color: var(--accent); }
+.h-score.b { color: var(--red); }
+
+/* ── END SCREEN ── */
+#end-screen {
+  align-items: center; justify-content: center; padding: 2rem;
+  background: radial-gradient(ellipse 50% 40% at 50% 30%, rgba(0,255,138,0.04) 0%, transparent 100%);
+}
+
+.end-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: 2px solid var(--green); padding: 2.5rem; max-width: 560px; width: 100%;
+}
+
+.final-top { text-align: center; margin-bottom: 2rem; }
+.final-lbl { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 3px; color: var(--muted); display: block; margin-bottom: 0.3rem; }
+.final-num { font-family: var(--mono); font-size: 5rem; color: var(--accent); line-height: 1; }
+.final-sub { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+.summary-box {
+  background: var(--bg); border: 1px solid var(--border); padding: 1.1rem;
+  margin-bottom: 1.5rem; position: relative; font-size: 0.88rem; line-height: 1.6; min-height: 72px;
+}
+
+.lb-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 0.75rem; display: block; }
+
+table.lb { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.78rem; margin-bottom: 1.5rem; }
+table.lb th { text-align: left; color: var(--muted); font-size: 0.6rem; letter-spacing: 2px; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
+table.lb td { padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.035); }
+table.lb tr.me td { color: var(--accent); }
+.r-rank { color: var(--muted); }
+
+.btn-again {
+  width: 100%; background: none; border: 1px solid var(--green); color: var(--green);
+  padding: 0.85rem; font-family: var(--sans); font-size: 1rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.12s;
+}
+.btn-again:hover { background: var(--green); color: #000; }
+
+#flash-overlay {
+  position: fixed; inset: 0; background: rgba(155,89,255,0.18);
+  pointer-events: none; opacity: 0; transition: opacity 0.12s; z-index: 9998;
+}
+#flash-overlay.on { opacity: 1; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes pulse-txt { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid var(--purple); border-top-color: transparent;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+  vertical-align: middle; margin-right: 6px;
+}
+
+@media (max-width: 800px) {
+  .game-body { grid-template-columns: 1fr; grid-template-rows: 45vh 1fr; }
+  .ctrl-panel { max-height: none; border-left: none; border-top: 1px solid var(--border); }
+  .stream-col { height: 45vh; }
+  .hdr-stats { gap: 1rem; }
+  #moment-btn { width: 140px; height: 140px; font-size: 1.1rem; }
+  .setup-card { padding: 1.8rem 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="flash-overlay"></div>
+
+<!-- ══════════════════ SETUP SCREEN ══════════════════ -->
+<div class="screen active" id="setup-screen">
+  <div class="setup-card">
+    <div class="logo">⚡<span class="y">TIMING</span><span class="r">GAME</span></div>
+    <div class="tagline">угадай момент · vision ai · real analysis</div>
+    <div class="vision-badge">GEMINI VISION · REAL FRAME ANALYSIS</div>
+
+    <div class="field-group">
+      <span class="field-label">Никнейм</span>
+      <input type="text" id="inp-name" placeholder="твой позывной..." maxlength="20" autocomplete="off">
+    </div>
+
+    <span class="field-label">Вид спорта / игра</span>
+    <div class="sport-grid">
+      <button class="sport-btn selected" data-sport="football"><span class="sport-emoji">⚽</span>Футбол</button>
+      <button class="sport-btn" data-sport="esports"><span class="sport-emoji">🎮</span>Киберспорт</button>
+      <button class="sport-btn" data-sport="basketball"><span class="sport-emoji">🏀</span>Баскетбол</button>
+      <button class="sport-btn" data-sport="boxing"><span class="sport-emoji">🥊</span>Бокс</button>
+    </div>
+
+    <div class="field-group">
+      <span class="field-label">Gemini API Key (обязательно — Vision AI движок)</span>
+      <input type="password" id="inp-key" placeholder="AIza..." autocomplete="off">
+      <div class="error-msg" id="key-error"></div>
+    </div>
+
+    <button class="btn-primary" id="btn-start" disabled>▶ &nbsp;НАЧАТЬ ИГРУ</button>
+    <div class="setup-note">
+      5 раундов · Gemini Vision реально анализирует кадры из видео<br>
+      Положи <strong>video.mp4</strong> рядом с main.py · Бесплатный ключ: <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ GAME SCREEN ══════════════════ -->
+<div class="screen" id="game-screen">
+  <header class="game-header">
+    <div class="game-logo">⚡<span class="y">TIMING</span>GAME</div>
+    <div class="hdr-stats">
+      <div class="stat"><span class="stat-label">ИГРОК</span><span class="stat-value" id="h-name">—</span></div>
+      <div class="stat"><span class="stat-label">СЧЁТ</span><span class="stat-value" id="h-score">0</span></div>
+      <div class="stat"><span class="stat-label">РАУНД</span><span class="stat-value" id="h-round">1/5</span></div>
+    </div>
+    <div class="sport-pill" id="h-sport">ФУТБОЛ ⚽</div>
+  </header>
+
+  <div class="game-body">
+    <div class="stream-col">
+      <div class="stream-wrap" id="stream-wrap">
+        <div class="no-video-msg" id="no-video-msg" style="display:none">
+          <div class="icon">📺</div>
+          <strong>video.mp4 не найден</strong>
+          Положи видеофайл рядом с main.py
+          <code>video.mp4</code>
+        </div>
+        <video id="stream-video" src="/video.mp4" preload="auto" style="display:none"></video>
+      </div>
+      <div class="video-bar">
+        <span class="vid-label">ВИДЕО</span>
+        <span class="timecode" id="vid-time">0:00</span>
+        <span class="vid-label" style="margin-left:auto">VISION AI PIPELINE</span>
+      </div>
+    </div>
+
+    <div class="ctrl-panel">
+      <div class="panel-sec">
+        <div class="sec-label"><div class="dot live" id="dot-live"></div>СТАТУС РАУНДА</div>
+        <div class="status-line waiting" id="status-line">ЖДИ СТАРТА...</div>
+        <div class="event-name" id="event-name"></div>
+      </div>
+
+      <div class="btn-wrap">
+        <button id="moment-btn" disabled>⚡<br>МОМЕНТ!</button>
+        <div class="click-hint" id="click-hint">нажми в момент события</div>
+      </div>
+
+      <div class="panel-sec">
+        <div class="score-row">
+          <div class="score-num" id="score-num">+0</div>
+          <div class="delta-txt" id="delta-txt"></div>
+        </div>
+      </div>
+
+      <div class="panel-sec">
+        <div class="sec-label"><div class="dot" style="background:var(--purple)"></div>AI СУДЬЯ — GEMINI VISION</div>
+        <div class="ai-box">
+          <div class="ai-chip">VISION · FRAME ANALYSIS</div>
+          <div id="ai-text" style="color:var(--muted)">ожидание...</div>
+        </div>
+      </div>
+
+      <div class="panel-sec">
+        <div class="sec-label"><div class="dot"></div>ИСТОРИЯ РАУНДОВ</div>
+        <div class="history-list" id="hist-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ END SCREEN ══════════════════ -->
+<div class="screen" id="end-screen">
+  <div class="end-card">
+    <div class="final-top">
+      <span class="final-lbl">ФИНАЛЬНЫЙ СЧЁТ</span>
+      <div class="final-num" id="fin-score">0</div>
+      <div class="final-sub" id="fin-rank">—</div>
+    </div>
+
+    <div class="summary-box">
+      <div class="ai-chip">AI РАЗБОР ИГРЫ — GEMINI VISION</div>
+      <div id="summary-text" class="thinking" style="color:var(--muted)">анализирую</div>
+    </div>
+
+    <span class="lb-label">🏆 ТАБЛИЦА ЛИДЕРОВ</span>
+    <table class="lb">
+      <thead><tr><th>#</th><th>ИГРОК</th><th>СПОРТ</th><th>ОЧКИ</th></tr></thead>
+      <tbody id="lb-body"></tbody>
+    </table>
+
+    <button class="btn-again" id="btn-again">↩ ИГРАТЬ СНОВА</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════
+const ROUNDS = 5;
+const LB_KEY = 'tg_lb_vision_v1';
+const KEY_KEY = 'tg_gemini_key';
+
+const SPORTS = {
+  football:   { label: 'ФУТБОЛ ⚽' },
+  esports:    { label: 'КИБЕРСПОРТ 🎮' },
+  basketball: { label: 'БАСКЕТБОЛ 🏀' },
+  boxing:     { label: 'БОКС 🥊' }
+};
+
+let G = {};
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+const savedKey = localStorage.getItem(KEY_KEY);
+if (savedKey) document.getElementById('inp-key').value = savedKey;
+
+function checkStartReady() {
+  const nameOk = document.getElementById('inp-name').value.trim().length >= 2;
+  const keyOk = document.getElementById('inp-key').value.trim().length >= 10;
+  document.getElementById('btn-start').disabled = !(nameOk && keyOk);
+}
+
+document.getElementById('inp-name').addEventListener('input', checkStartReady);
+document.getElementById('inp-key').addEventListener('input', () => {
+  document.getElementById('key-error').classList.remove('visible');
+  checkStartReady();
+});
+
+document.querySelectorAll('.sport-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.sport-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+  });
+});
+
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('moment-btn').addEventListener('click', handleClick);
+document.getElementById('btn-again').addEventListener('click', goSetup);
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goSetup() { show('setup-screen'); }
+
+// ── Video timecode ──
+const videoEl = document.getElementById('stream-video');
+videoEl.addEventListener('timeupdate', () => {
+  const t = videoEl.currentTime;
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  document.getElementById('vid-time').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+});
+
+// ══════════════════════════════════════════════════
+// GAME FLOW
+// ══════════════════════════════════════════════════
+async function startGame() {
+  const btn = document.getElementById('btn-start');
+  const errEl = document.getElementById('key-error');
+  const apiKey = document.getElementById('inp-key').value.trim();
+
+  btn.disabled = true;
+  btn.textContent = '⏳ ПОДКЛЮЧАЮ GEMINI...';
+  errEl.classList.remove('visible');
+
+  // 1. Инициализируем Gemini
+  try {
+    const res = await fetch('/api/init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      errEl.textContent = `⚠ ${data.error}`;
+      errEl.classList.add('visible');
+      btn.textContent = '▶  НАЧАТЬ ИГРУ';
+      checkStartReady();
+      return;
+    }
+    console.log('✓ Gemini:', data.model);
+  } catch (e) {
+    errEl.textContent = '⚠ Бэкенд недоступен. Запусти python main.py';
+    errEl.classList.add('visible');
+    btn.textContent = '▶  НАЧАТЬ ИГРУ';
+    checkStartReady();
+    return;
+  }
+
+  // 2. Проверяем видео
+  try {
+    const vInfo = await fetch('/api/video-info').then(r => r.json());
+    if (!vInfo.exists) {
+      errEl.textContent = '⚠ video.mp4 не найден. Положи видео рядом с main.py';
+      errEl.classList.add('visible');
+      btn.textContent = '▶  НАЧАТЬ ИГРУ';
+      checkStartReady();
+      return;
+    }
+    G.videoDuration = vInfo.duration;
+  } catch {
+    G.videoDuration = 30;
+  }
+
+  const sport = document.querySelector('.sport-btn.selected').dataset.sport;
+  G = {
+    ...G,
+    name: document.getElementById('inp-name').value.trim(),
+    sport, apiKey,
+    totalScore: 0, round: 0, history: [],
+    roundActive: false, userClicked: false, _readyMode: false,
+    analyzing: false
+  };
+
+  localStorage.setItem(KEY_KEY, apiKey);
+  document.getElementById('h-name').textContent = G.name;
+  document.getElementById('h-score').textContent = '0';
+  document.getElementById('h-sport').textContent = SPORTS[sport].label;
+  document.getElementById('hist-list').innerHTML = '';
+  btn.textContent = '▶  НАЧАТЬ ИГРУ';
+  checkStartReady();
+
+  // Показываем видео
+  const video = document.getElementById('stream-video');
+  video.style.display = 'block';
+  document.getElementById('no-video-msg').style.display = 'none';
+  video.load();
+
+  show('game-screen');
+
+  const aiEl = document.getElementById('ai-text');
+  aiEl.className = '';
+  aiEl.textContent = `${G.name}, Gemini Vision подключён! Жми кнопку в момент события — ИИ проанализирует кадры.`;
+
+  showReadyButton();
+}
+
+// ── Ready button between rounds ──
+function showReadyButton() {
+  const btn = document.getElementById('moment-btn');
+  btn.disabled = false;
+  btn.classList.remove('clicked', 'success-state');
+  btn.classList.add('ready-state');
+  btn.innerHTML = `▶<br>РАУНД ${G.round + 1}`;
+  document.getElementById('click-hint').textContent = 'нажми когда готов';
+  setStatus('waiting', `РАУНД ${G.round + 1} — НАЖМИ КОГДА ГОТОВ`);
+  document.getElementById('event-name').textContent = '';
+  resetScoreUI();
+  G._readyMode = true;
+}
+
+function handleClick() {
+  const btn = document.getElementById('moment-btn');
+
+  // Режим retry после rate limit
+  if (G._retryMode) {
+    G._retryMode = false;
+    btn.classList.remove('ready-state');
+    btn.classList.add('clicked');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span><br>RETRY...';
+    btn.style.fontSize = '';
+    setStatus('analyzing', 'ПОВТОРНЫЙ ЗАПРОС...');
+    document.getElementById('click-hint').textContent = 'пробую другую модель...';
+    analyzeFrame(G._retryTimestamp);
+    return;
+  }
+
+  // Режим "готов" — запускаем раунд
+  if (G._readyMode) {
+    G._readyMode = false;
+    btn.classList.remove('ready-state');
+    startRound();
+    return;
+  }
+
+  // Режим игры — ловим тайминг
+  if (!G.roundActive || G.userClicked || G.analyzing) return;
+  G.userClicked = true;
+
+  const video = document.getElementById('stream-video');
+  const clickTime = video.currentTime;
+
+  btn.classList.add('clicked');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span><br>АНАЛИЗ';
+
+  document.getElementById('click-hint').textContent = `t=${clickTime.toFixed(2)}с — извлекаю кадры...`;
+  setStatus('analyzing', 'AI АНАЛИЗИРУЕТ КАДРЫ...');
+
+  // Флеш
+  const ov = document.getElementById('flash-overlay');
+  ov.classList.add('on');
+  setTimeout(() => ov.classList.remove('on'), 280);
+
+  analyzeFrame(clickTime);
+}
+
+function startRound() {
+  G.round++;
+  G.roundActive = true;
+  G.userClicked = false;
+  G.analyzing = false;
+
+  document.getElementById('h-round').textContent = `${G.round}/${ROUNDS}`;
+  document.getElementById('event-name').textContent = '';
+  document.getElementById('click-hint').textContent = 'смотри видео и жми в момент события';
+  setStatus('waiting', 'СМОТРИ ВИДЕО... ЖМИ КОГДА СОБЫТИЕ!');
+  resetScoreUI();
+
+  const btn = document.getElementById('moment-btn');
+  btn.disabled = false;
+  btn.classList.remove('clicked', 'ready-state', 'success-state');
+  btn.innerHTML = '⚡<br>МОМЕНТ!';
+
+  // Запускаем видео с рандомной позиции (чтобы каждый раунд — новый момент)
+  const video = document.getElementById('stream-video');
+  const dur = G.videoDuration || 30;
+  const safeEnd = Math.max(0, dur - 10);
+  const startAt = Math.random() * safeEnd;
+  video.currentTime = startAt;
+  video.play().catch(() => {});
+
+  const aiEl = document.getElementById('ai-text');
+  aiEl.className = '';
+  aiEl.textContent = 'Смотри внимательно! Нажми кнопку когда увидишь ключевой момент.';
+}
+
+async function analyzeFrame(timestamp) {
+  G.analyzing = true;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp, sport: G.sport })
+    });
+
+    const data = await res.json();
+
+    // Обработка rate limit — даём шанс на retry
+    if (data.error === 'rate_limit') {
+      console.warn('Rate limit hit, offering retry...');
+      setStatus('event', '⚠ ЛИМИТ API');
+
+      const aiEl = document.getElementById('ai-text');
+      aiEl.className = '';
+      aiEl.textContent = data.comment;
+
+      document.getElementById('click-hint').textContent = 'Квота исчерпана — подожди и жми RETRY';
+
+      const btn = document.getElementById('moment-btn');
+      btn.disabled = false;
+      btn.classList.remove('clicked');
+      btn.classList.add('ready-state');
+      btn.innerHTML = '🔄<br>RETRY';
+      btn.style.fontSize = '1rem';
+
+      // Специальный одноразовый обработчик для retry
+      G._retryTimestamp = timestamp;
+      G._retryMode = true;
+      G.analyzing = false;
+      return;
+    }
+
+    scoreRound(data, timestamp);
+  } catch (err) {
+    console.error('Analyze error:', err);
+    setStatus('event', 'ОШИБКА');
+    const aiEl = document.getElementById('ai-text');
+    aiEl.className = '';
+    aiEl.textContent = `Ошибка: ${err.message?.slice(0, 150) || 'неизвестная'}`;
+
+    scoreRound({
+      is_event: false, confidence: 0,
+      event_name: 'Ошибка сети', comment: 'Бэкенд недоступен или вернул ошибку.'
+    }, timestamp);
+  }
+}
+
+function scoreRound(data, timestamp) {
+  G.roundActive = false;
+  G.analyzing = false;
+
+  const video = document.getElementById('stream-video');
+  video.pause();
+
+  const pts = data.is_event ? data.confidence : 0;
+  const eventName = data.event_name || (data.is_event ? 'Событие!' : 'Ничего');
+
+  G.totalScore += pts;
+  document.getElementById('h-score').textContent = G.totalScore;
+
+  // Обновляем кнопку
+  const btn = document.getElementById('moment-btn');
+  if (pts >= 50) {
+    btn.classList.remove('clicked');
+    btn.classList.add('success-state');
+    btn.innerHTML = '✓<br>' + pts;
+  }
+
+  // Показываем событие
+  document.getElementById('event-name').textContent = eventName;
+
+  // Очки
+  const sEl = document.getElementById('score-num');
+  sEl.textContent = pts > 0 ? `+${pts}` : 'МИМО';
+  sEl.className = 'score-num show' + (pts >= 70 ? ' g' : pts >= 30 ? ' ok' : ' miss');
+
+  document.getElementById('delta-txt').textContent =
+    data.is_event
+      ? `Уверенность: ${data.confidence}% · t=${timestamp.toFixed(1)}с` + (data.model_used ? ` · ${data.model_used}` : '')
+      : `Не обнаружено · t=${timestamp.toFixed(1)}с`;
+
+  setStatus(pts >= 70 ? 'done' : pts >= 30 ? 'hint' : 'event',
+    pts >= 70 ? '✓ ПОДТВЕРЖДЕНО!' : pts >= 30 ? '~ ВОЗМОЖНО' : '✗ МИМО');
+
+  // AI коммент
+  const aiEl = document.getElementById('ai-text');
+  aiEl.className = '';
+  aiEl.textContent = data.comment || (pts > 0 ? 'Хороший глаз!' : 'Ничего интересного на экране.');
+
+  // История
+  G.history.push({ round: G.round, event: eventName, pts, hit: data.is_event, timestamp });
+  addHistoryRow(G.round, eventName, pts, data.is_event);
+
+  setTimeout(() => {
+    if (G.round < ROUNDS) showReadyButton();
+    else endGame();
+  }, 3500);
+}
+
+// ── UI Helpers ──
+function setStatus(cls, txt) {
+  const el = document.getElementById('status-line');
+  el.className = 'status-line ' + cls;
+  el.textContent = txt;
+  document.getElementById('dot-live').className = 'dot' + (cls === 'event' || cls === 'analyzing' ? ' live' : '');
+}
+
+function resetScoreUI() {
+  document.getElementById('score-num').className = 'score-num';
+  document.getElementById('score-num').textContent = '+0';
+  document.getElementById('delta-txt').textContent = '';
+}
+
+function addHistoryRow(r, evt, pts, hit) {
+  const d = document.createElement('div');
+  d.className = 'h-item';
+  const cls = pts >= 70 ? 'g' : pts >= 30 ? 'o' : 'b';
+  const icon = hit ? '✓' : '✗';
+  d.innerHTML = `<span class="h-event">${icon} R${r}: ${evt}</span><span class="h-score ${cls}">${pts > 0 ? '+' + pts : 'МИМО'}</span>`;
+  document.getElementById('hist-list').prepend(d);
+}
+
+// ── End Game ──
+async function endGame() {
+  const lb = loadLB();
+  lb.push({ name: G.name, sport: SPORTS[G.sport].label, score: G.totalScore, date: new Date().toLocaleDateString('ru-RU') });
+  lb.sort((a, b) => b.score - a.score);
+  const trimmed = lb.slice(0, 25);
+  saveLB(trimmed);
+  const myIdx = trimmed.findIndex(e => e.name === G.name && e.score === G.totalScore);
+
+  document.getElementById('fin-score').textContent = G.totalScore;
+  document.getElementById('fin-rank').textContent = myIdx >= 0 ? `#${myIdx + 1} в таблице лидеров` : '';
+  renderLB(trimmed, myIdx);
+  show('end-screen');
+
+  // AI Summary
+  const el = document.getElementById('summary-text');
+  el.className = 'thinking';
+  el.textContent = '';
+  try {
+    const res = await fetch('/api/summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        history: G.history,
+        name: G.name,
+        sport: SPORTS[G.sport].label,
+        total_score: G.totalScore
+      })
+    });
+    const data = await res.json();
+    el.className = '';
+    el.textContent = data.summary;
+  } catch {
+    el.className = '';
+    el.textContent = `Итог: ${G.totalScore}/${ROUNDS * 100}. ${G.totalScore >= ROUNDS * 50 ? 'Хорошая игра!' : 'Есть куда расти!'}`;
+  }
+}
+
+function loadLB() { try { return JSON.parse(localStorage.getItem(LB_KEY) || '[]'); } catch { return []; } }
+function saveLB(d) { localStorage.setItem(LB_KEY, JSON.stringify(d)); }
+
+function renderLB(lb, myIdx) {
+  const body = document.getElementById('lb-body');
+  body.innerHTML = '';
+  lb.slice(0, 10).forEach((e, i) => {
+    const tr = document.createElement('tr');
+    if (i === myIdx) tr.classList.add('me');
+    tr.innerHTML = `<td class="r-rank">${['🥇','🥈','🥉'][i] || (i + 1)}</td><td>${e.name}${i === myIdx ? ' ◀' : ''}</td><td style="color:var(--muted)">${e.sport}</td><td style="color:var(--accent)">${e.score}</td>`;
+    body.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>
