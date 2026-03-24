@@ -32,8 +32,8 @@ Frontend показывает результат, очки, комментари
 
 **1. Клонируй репо**
 ```bash
-git clone https://github.com/ТВОЙ_ЮЗЕР/timinggame.git
-cd timinggame
+git clone https://github.com/Loc-ID/TestGame.git
+cd TestGame
 ```
 
 **2. Установи зависимости**
